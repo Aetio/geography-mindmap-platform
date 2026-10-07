@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>倾阳之弧</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Microsoft YaHei', sans-serif; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+            z-index: 10;
+            border-left: 4px solid #ffaa00;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        #info h1 {
+            margin: 0 0 8px 0;
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #ffaa00;
+        }
+        #info p {
+            margin: 5px 0;
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 30, 0.85);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 20px 35px;
+            border-radius: 60px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 20;
+            border: 1px solid #444c5c;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            pointer-events: all;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #controls label {
+            font-size: 1rem;
+            font-weight: 300;
+            color: #ccddf9;
+            letter-spacing: 1px;
+        }
+        #controls input {
+            width: 300px;
+            cursor: pointer;
+            accent-color: #ffaa00;
+            height: 6px;
+            border-radius: 10px;
+        }
+        #controls span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffaa00;
+            min-width: 140px;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 6px 15px;
+            border-radius: 40px;
+            border: 1px solid #556677;
+        }
+        button {
+            background: #ffaa33;
+            border: none;
+            color: #1a1a2e;
+            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        button:hover {
+            background: #ffcc55;
+            transform: scale(1.02);
+        }
+        #note {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            z-index: 15;
+        }
+        @media (max-width: 800px) {
+            #controls { flex-direction: column; gap: 15px; width: 90%; padding: 20px; border-radius: 40px; }
+            #controls input { width: 100%; }
+            #info { top: 10px; left: 10px; padding: 10px; font-size: 0.8rem; }
+            button { width: 100%; }
+        }
+        .altitude-label {
+            font-size: 12px;
+            font-weight: normal;
+            color: #ffcc88;
+            text-shadow: 0px 0px 2px #000000;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-family: monospace;
+            pointer-events: none;
+            backdrop-filter: blur(3px);
+            border-left: 2px solid #ff8844;
+        }
+        /* 俯视窗口样式 */
+        .overview-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 260px;
+            height: 260px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 170, 51, 0.8);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            z-index: 25;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .overview-container:hover {
+            transform: scale(1.02);
+            border-color: #ffaa66;
+        }
+        .overview-label {
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 26;
+            backdrop-filter: blur(2px);
+            border-left: 2px solid #ffaa66;
+        }
+        .overview-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>🌍 自动自转地球 · 四季循环 · 北极俯视窗口</h1>
+        <p>经纬网 | 红色: 回归线 (±23.5°) | 青色: 极圈 (±66.5°) | 黄色: 赤道 | 灰色: 普通经纬线</p>
+        <p><span style="color: #ffaa00;">⏺️ 橙色圆环: 晨昏线</span> | <span style="color: #ff8844;">🟠 橙色曲线: 昼半球等太阳高度线 (15°,30°,45°,60°,75°)</span></p>
+        <p><span style="color: #ffaa66;">➡️ 黄色箭头: 平行太阳光线 (5根等距，最外两根与地球相切)</span> | <span style="color: #ff3333;">🔴 红点: 太阳直射点 (固定于光线末端)</span></p>
+        <p>🌐 地球纹理 | <strong>🔄 地球自动自转 (可开关)</strong> | 自动播放模拟季节变化 | 右下角小窗口为北极俯视视角</p>
+    </div>
+    <div id="controls">
+        <label for="sunLat">☀️ 直射纬度:</label>
+        <input type="range" id="sunLat" min="-23.5" max="23.5" step="0.1" value="0">
+        <span id="latValue">赤道 0°</span>
+        <button id="autoSeasonBtn">▶ 季节自动</button>
+        <button id="autoRotateBtn">⏸ 暂停自转</button>
+    </div>
+    <div id="note">🌞 季节自动循环 (周期12秒) | 地球自动自转速度 ~5°/秒 | 俯视窗口展示北极区域</div>
+
+    <!-- 俯视窗口容器 -->
+    <div class="overview-container" id="overviewContainer">
+        <div class="overview-label">北极俯视</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景、相机、渲染器 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20);
+
+        // 主相机
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(5, 2, 8);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = false;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 俯视相机 (北极视角) - 拉近相机，使地球更大 ---
+        const overviewCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+        overviewCamera.position.set(0, 5.8, 0);  // 距离地心5.8，地球半径2，视野45°，地球将占满大部分画面
+        overviewCamera.lookAt(0, 0, 0);
+        
+        // 俯视渲染器
+        const overviewContainer = document.getElementById('overviewContainer');
+        const overviewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        overviewRenderer.setSize(260, 260);
+        overviewRenderer.setClearColor(0x0a0a20, 1);
+        overviewContainer.appendChild(overviewRenderer.domElement);
+        overviewRenderer.domElement.style.width = '100%';
+        overviewRenderer.domElement.style.height = '100%';
+        overviewRenderer.domElement.style.borderRadius = '10px';
+
+        // --- 轨道控制器 (相机控制) ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = false;
+        controls.enableZoom = true;
+        controls.maxDistance = 20;
+        controls.minDistance = 4;
+        controls.target.set(0, 0, 0);
+
+        // --- 光照系统 ---
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.35);
+        scene.add(ambientLight);
+
+        // 主光源：平行光 (模拟太阳，方向随直射纬度变化)
+        const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        sunLight.position.set(10, 0, 0);
+        sunLight.target.position.set(0, 0, 0);
+        scene.add(sunLight);
+        scene.add(sunLight.target);
+
+        // 微弱补光
+        const backLight = new THREE.DirectionalLight(0x88aaff, 0.12);
+        backLight.position.set(-5, -2, -5);
+        backLight.target.position.set(0, 0, 0);
+        scene.add(backLight);
+        scene.add(backLight.target);
+        const fillLight = new THREE.PointLight(0x5577aa, 0.08);
+        fillLight.position.set(0, -3, 0);
+        scene.add(fillLight);
+
+        // --- 星空背景 (粒子系统) ---
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 4000;
+        const starsPositions = new Float32Array(starsCount * 3);
+        const starsColors = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount; i++) {
+            const r = 200 + Math.random() * 400;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starsPositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+            starsPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+            starsPositions[i*3+2] = r * Math.cos(phi);
+            const intensity = 0.5 + Math.random() * 0.5;
+            starsColors[i*3] = intensity * (Math.random() > 0.8 ? 1.0 : 0.9);
+            starsColors[i*3+1] = intensity * (Math.random() > 0.8 ? 0.9 : 0.8);
+            starsColors[i*3+2] = intensity * 1.0;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+        starsGeometry.setAttribute('color', new THREE.BufferAttribute(starsColors, 3));
+        const starCanvas = document.createElement('canvas');
+        starCanvas.width = 32;
+        starCanvas.height = 32;
+        const starCtx = starCanvas.getContext('2d');
+        starCtx.fillStyle = 'white';
+        starCtx.arc(16, 16, 8, 0, 2 * Math.PI);
+        starCtx.fill();
+        const starTexture = new THREE.CanvasTexture(starCanvas);
+        const starsMaterial = new THREE.PointsMaterial({ size: 0.25, vertexColors: true, map: starTexture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // --- 地球参数 ---
+        const EARTH_RADIUS = 2.0;
+        const LINE_RADIUS = EARTH_RADIUS * 1.003;
+
+        // --- 创建一个组用于地球及其附属物 (可整体旋转实现自转) ---
+        const earthGroup = new THREE.Group();
+        scene.add(earthGroup);
+
+        // --- 地球网格 (纹理材质) ---
+        const textureLoader = new THREE.TextureLoader();
+        const earthMap = textureLoader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+        const earthNormalMap = textureLoader.load('https://threejs.org/examples/textures/planets/earth_normal_2048.jpg');
+        const earthMaterial = new THREE.MeshStandardMaterial({
+            map: earthMap,
+            normalMap: earthNormalMap,
+            roughness: 0.5,
+            metalness: 0.1
+        });
+        const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 128, 128);
+        const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+        earthGroup.add(earthMesh);
+
+        // --- 经纬网 (所有线框添加到 earthGroup，随地球旋转) ---
+        function createLatitudeCircle(latDeg, color, lineRadius = LINE_RADIUS) {
+            const lat = (latDeg * Math.PI) / 180;
+            const y = lineRadius * Math.sin(lat);
+            const r = lineRadius * Math.cos(lat);
+            const points = [];
+            for (let i = 0; i <= 64; i++) {
+                const lon = (i / 64) * Math.PI * 2;
+                points.push(new THREE.Vector3(r * Math.cos(lon), y, r * Math.sin(lon)));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: color }));
+        }
+        function createLongitudeLine(lonDeg, color, lineRadius = LINE_RADIUS) {
+            const lon = (lonDeg * Math.PI) / 180;
+            const points = [];
+            for (let latDeg = -85; latDeg <= 85; latDeg += 5) {
+                const lat = (latDeg * Math.PI) / 180;
+                points.push(new THREE.Vector3(
+                    lineRadius * Math.cos(lat) * Math.cos(lon),
+                    lineRadius * Math.sin(lat),
+                    lineRadius * Math.cos(lat) * Math.sin(lon)
+                ));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: color }));
+        }
+        // 普通纬线
+        for (let lat = -75; lat <= 75; lat += 15) {
+            if (Math.abs(lat) === 0 || Math.abs(lat) === 23.5 || Math.abs(lat) === 66.5) continue;
+            earthGroup.add(createLatitudeCircle(lat, 0x888888));
+        }
+        // 特殊纬线
+        const specialLatitudes = [
+            { deg: 0, color: 0xffdd44 }, { deg: 23.5, color: 0xff5555 }, { deg: -23.5, color: 0xff5555 },
+            { deg: 66.5, color: 0x55ccff }, { deg: -66.5, color: 0x55ccff }
+        ];
+        specialLatitudes.forEach(item => earthGroup.add(createLatitudeCircle(item.deg, item.color)));
+        // 经线
+        for (let lon = 0; lon < 360; lon += 30) earthGroup.add(createLongitudeLine(lon, 0xaaaaaa));
+
+        // 极点小球
+        const poleGeo = new THREE.SphereGeometry(0.03, 8, 8);
+        const poleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const northPole = new THREE.Mesh(poleGeo, poleMat); northPole.position.set(0, EARTH_RADIUS, 0); earthGroup.add(northPole);
+        const southPole = new THREE.Mesh(poleGeo, poleMat); southPole.position.set(0, -EARTH_RADIUS, 0); earthGroup.add(southPole);
+        const axisLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -EARTH_RADIUS*1.1, 0), new THREE.Vector3(0, EARTH_RADIUS*1.1, 0)]),
+            new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.2, transparent: true }));
+        earthGroup.add(axisLine);
+
+        // ========== 太阳直射点红点 (固定在世界空间光线方向末端) ==========
+        const subsolarPoint = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x441111, emissiveIntensity: 0.8 }));
+        scene.add(subsolarPoint);
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xff6666, transparent: true, opacity: 0.3, side: THREE.BackSide }));
+        subsolarPoint.add(glow);
+
+        // 动态元素组 (晨昏线、等高度线、光线箭头) 添加到 earthGroup，随地球旋转
+        const dynamicGroup = new THREE.Group();
+        earthGroup.add(dynamicGroup);
+        // 标签组 (等高度线度数) 也添加到 earthGroup
+        const labelGroup = new THREE.Group();
+        earthGroup.add(labelGroup);
+
+        // 辅助函数：生成晨昏线 (在地球局部坐标系中)
+        function createTerminatorInEarthSpace(lightDirWorld, radius) {
+            const quat = earthGroup.quaternion.clone().conjugate();
+            const lightDirLocal = lightDirWorld.clone().applyQuaternion(quat).normalize();
+            const up = new THREE.Vector3(0, 1, 0);
+            if (Math.abs(lightDirLocal.dot(up)) > 0.9999) up.set(0, 0, 1);
+            const u = new THREE.Vector3().crossVectors(lightDirLocal, up).normalize();
+            const v = new THREE.Vector3().crossVectors(u, lightDirLocal).normalize();
+            const points = [];
+            for (let i = 0; i <= 128; i++) {
+                const angle = (i / 128) * Math.PI * 2;
+                const p = new THREE.Vector3().addVectors(u.clone().multiplyScalar(Math.cos(angle) * radius),
+                                                           v.clone().multiplyScalar(Math.sin(angle) * radius));
+                points.push(p);
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.LineLoop(geometry, new THREE.LineBasicMaterial({ color: 0xffaa00 }));
+        }
+
+        // 生成等太阳高度线和标签位置 (优化标签稳定性)
+        function createAltitudeCirclesAndLabels(lightDirWorld, radius, altitudes) {
+            const quat = earthGroup.quaternion.clone().conjugate();
+            const lightDirLocal = lightDirWorld.clone().applyQuaternion(quat).normalize();
+            const lines = [];
+            const labelPositions = [];
+            altitudes.forEach(h => {
+                const zenRad = (90 - h) * Math.PI / 180;
+                const cosZ = Math.cos(zenRad), sinZ = Math.sin(zenRad);
+                const center = lightDirLocal.clone().multiplyScalar(radius * cosZ);
+                const r = radius * sinZ;
+                const up = new THREE.Vector3(0, 1, 0);
+                if (Math.abs(lightDirLocal.dot(up)) > 0.9999) up.set(0, 0, 1);
+                const u = new THREE.Vector3().crossVectors(lightDirLocal, up).normalize();
+                const v = new THREE.Vector3().crossVectors(u, lightDirLocal).normalize();
+                const points = [];
+                for (let i = 0; i <= 200; i++) {
+                    const angle = (i / 200) * Math.PI * 2;
+                    const local = u.clone().multiplyScalar(Math.cos(angle) * r).add(v.clone().multiplyScalar(Math.sin(angle) * r));
+                    const worldPoint = center.clone().add(local);
+                    if (worldPoint.dot(lightDirLocal) > 0) {
+                        points.push(worldPoint);
+                    }
+                }
+                if (points.length > 2) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    lines.push(new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xff8844 })));
+                }
+                // 标签位置取弧线中点
+                let labelPos = null;
+                if (points.length > 0) {
+                    const midIdx = Math.floor(points.length / 2);
+                    labelPos = points[midIdx].clone();
+                    const outward = labelPos.clone().normalize();
+                    labelPos.add(outward.multiplyScalar(0.1));
+                }
+                if (labelPos) {
+                    labelPositions.push({ pos: labelPos, altitude: h });
+                }
+            });
+            return { lines, labelPositions };
+        }
+
+        // 生成光线箭头
+        function createRaysInEarthSpace(lightDirWorld, radius) {
+            const quat = earthGroup.quaternion.clone().conjugate();
+            const lightDirLocal = lightDirWorld.clone().applyQuaternion(quat).normalize();
+            const rayDirLocal = lightDirLocal.clone().negate();
+            const worldUp = new THREE.Vector3(0, 1, 0);
+            let perpDir;
+            if (Math.abs(rayDirLocal.dot(worldUp)) > 0.9999) perpDir = new THREE.Vector3(1, 0, 0);
+            else perpDir = worldUp.clone().sub(rayDirLocal.clone().multiplyScalar(worldUp.dot(rayDirLocal))).normalize();
+            const offsets = [-radius, -radius/2, 0, radius/2, radius];
+            const arrows = [];
+            offsets.forEach(offset => {
+                const P = perpDir.clone().multiplyScalar(offset);
+                const tIntersect = Math.sqrt(Math.max(0, radius*radius - offset*offset));
+                const startPoint = P.clone().sub(rayDirLocal.clone().multiplyScalar(3.0));
+                const endPoint = P.clone().add(rayDirLocal.clone().multiplyScalar(tIntersect));
+                const direction = endPoint.clone().sub(startPoint).normalize();
+                const length = startPoint.distanceTo(endPoint);
+                if (length > 0.01) {
+                    arrows.push(new THREE.ArrowHelper(direction, startPoint, length, 0xffaa66, 0.25, 0.12));
+                }
+            });
+            return arrows;
+        }
+
+        // 更新所有动态元素
+        let currentLightDir = new THREE.Vector3(1, 0, 0);
+        function updateDynamicElements() {
+            while(dynamicGroup.children.length) dynamicGroup.remove(dynamicGroup.children[0]);
+            while(labelGroup.children.length) labelGroup.remove(labelGroup.children[0]);
+            
+            const terminator = createTerminatorInEarthSpace(currentLightDir, EARTH_RADIUS);
+            dynamicGroup.add(terminator);
+            
+            const { lines, labelPositions } = createAltitudeCirclesAndLabels(currentLightDir, EARTH_RADIUS, [15, 30, 45, 60, 75]);
+            lines.forEach(line => dynamicGroup.add(line));
+            
+            labelPositions.forEach(item => {
+                const div = document.createElement('div');
+                div.textContent = `${item.altitude}°`;
+                div.className = 'altitude-label';
+                const label = new CSS2DObject(div);
+                label.position.copy(item.pos);
+                labelGroup.add(label);
+            });
+            
+            const rays = createRaysInEarthSpace(currentLightDir, EARTH_RADIUS);
+            rays.forEach(arrow => dynamicGroup.add(arrow));
+        }
+
+        // 更新太阳光线方向
+        function updateSunLightDirection(latDeg) {
+            const lat = latDeg * Math.PI / 180;
+            const distance = 15;
+            const x = distance * Math.cos(lat);
+            const y = distance * Math.sin(lat);
+            const z = 0;
+            sunLight.position.set(x, y, z);
+            currentLightDir = sunLight.position.clone().normalize();
+            subsolarPoint.position.copy(currentLightDir.clone().multiplyScalar(EARTH_RADIUS));
+            updateDynamicElements();
+        }
+
+        // 季节控制
+        const latSlider = document.getElementById('sunLat');
+        const latSpan = document.getElementById('latValue');
+        let autoSeason = false;
+        let seasonStartTime = 0;
+        const seasonCycleDuration = 12000;
+        let seasonAnimFrame = null;
+
+        function updateSeason(latDeg) {
+            updateSunLightDirection(latDeg);
+            let seasonText = '';
+            if (Math.abs(latDeg) < 0.5) seasonText = '春分/秋分';
+            else if (latDeg > 22.5) seasonText = '夏至 (北半球)';
+            else if (latDeg < -22.5) seasonText = '冬至 (北半球)';
+            else if (latDeg > 0) seasonText = '春/夏过渡';
+            else seasonText = '秋/冬过渡';
+            latSpan.innerHTML = `${latDeg > 0 ? '北纬' : (latDeg < 0 ? '南纬' : '赤道')} ${Math.abs(latDeg).toFixed(1)}° | ${seasonText}`;
+            latSlider.value = latDeg;
+        }
+
+        function startAutoSeason() {
+            if (seasonAnimFrame) cancelAnimationFrame(seasonAnimFrame);
+            autoSeason = true;
+            autoSeasonBtn.textContent = '⏸ 季节暂停';
+            const startLat = parseFloat(latSlider.value);
+            const phaseOffset = (startLat + 23.5) / 47;
+            seasonStartTime = performance.now() - phaseOffset * seasonCycleDuration;
+            function step(now) {
+                if (!autoSeason) return;
+                const elapsed = now - seasonStartTime;
+                const t = (elapsed % seasonCycleDuration) / seasonCycleDuration;
+                const sinVal = Math.sin(t * Math.PI * 2);
+                const lat = sinVal * 23.5;
+                updateSeason(lat);
+                seasonAnimFrame = requestAnimationFrame(step);
+            }
+            seasonAnimFrame = requestAnimationFrame(step);
+        }
+        function stopAutoSeason() {
+            if (seasonAnimFrame) cancelAnimationFrame(seasonAnimFrame);
+            autoSeason = false;
+            autoSeasonBtn.textContent = '▶ 季节自动';
+            seasonAnimFrame = null;
+        }
+
+        // 地球自转控制
+        let autoRotate = true;
+        const rotateSpeed = 0.005;
+        const autoRotateBtn = document.getElementById('autoRotateBtn');
+        
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            autoRotateBtn.textContent = autoRotate ? '⏸ 暂停自转' : '▶ 开始自转';
+        }
+        autoRotateBtn.addEventListener('click', toggleAutoRotate);
+        autoRotate = true;
+        autoRotateBtn.textContent = '⏸ 暂停自转';
+
+        const autoSeasonBtn = document.getElementById('autoSeasonBtn');
+        autoSeasonBtn.addEventListener('click', () => {
+            if (autoSeason) stopAutoSeason();
+            else startAutoSeason();
+        });
+
+        latSlider.addEventListener('input', (e) => {
+            if (autoSeason) stopAutoSeason();
+            updateSeason(parseFloat(e.target.value));
+        });
+
+        // 初始化
+        updateSeason(0);
+        updateDynamicElements();
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (autoRotate) {
+                earthGroup.rotation.y += rotateSpeed;
+                updateDynamicElements();
+            }
+            
+            stars.rotation.y += 0.00005;
+            stars.rotation.x += 0.00002;
+            controls.update();
+            
+            // 主视图渲染
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+            
+            // 俯视窗口渲染 (相机固定从上方看)
+            overviewRenderer.render(scene, overviewCamera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // 俯视窗口大小固定，无需调整
+        });
+    </script>
+</body>
+</html>
