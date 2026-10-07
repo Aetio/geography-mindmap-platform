@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+<defs><radialGradient id="space"><stop stop-color="#111d36"/><stop offset="1" stop-color="#050810"/></radialGradient><linearGradient id="earth" x2=".8" y2="1"><stop stop-color="#58c8eb"/><stop offset=".55" stop-color="#2678bf"/><stop offset="1" stop-color="#0b2857"/></linearGradient><linearGradient id="moon" x2="0" y2="1"><stop stop-color="#d0c7b7"/><stop offset="1" stop-color="#6e6c72"/></linearGradient></defs>
+<rect width="640" height="360" rx="20" fill="url(#space)"/>
+<g fill="#dceaff" opacity=".75"><circle cx="64" cy="55" r="2"/><circle cx="130" cy="112" r="1.5"/><circle cx="220" cy="44" r="1.5"/><circle cx="470" cy="58" r="2"/><circle cx="570" cy="128" r="1.3"/><circle cx="400" cy="160" r="1.2"/><circle cx="80" cy="205" r="1.2"/></g>
+<path d="M54 218a270 150 0 0 1 532 0" fill="none" stroke="#5f82bd" stroke-opacity=".45" stroke-width="2" stroke-dasharray="5 8"/>
+<circle cx="320" cy="210" r="88" fill="url(#earth)" stroke="#9ce7ff" stroke-width="4"/>
+<path d="M267 158l25-16 18 8 14 24-15 14-6 21-24-5-13-22zm76 39 23-11 24 9-4 23-23 8-9-13zM250 226l18 7 8 19-17 15-20-17z" fill="#61b787" opacity=".9"/>
+<path d="M232 176a88 88 0 0 1 147-38 90 90 0 0 0-108 151 88 88 0 0 1-39-113z" fill="#d8f7ff" opacity=".28"/>
+<path d="M0 292Q115 250 230 294t220 2q104-37 190 0v64H0z" fill="url(#moon)"/>
+<path d="M0 292Q115 250 230 294t220 2q104-37 190 0" fill="none" stroke="#d4e0ec" stroke-width="3"/>
+<text x="320" y="336" text-anchor="middle" fill="#eef4ff" font-family="sans-serif" font-size="17" letter-spacing="2">地升地落 · 宇航员视角</text>
+</svg>
