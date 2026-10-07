@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>地球自转 · 天体视运动 · 地平视角</title>
+<style>
+  html,body{
+    margin:0;padding:0;height:100%;width:100%;
+    background:#04060d;overflow:hidden;
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    -webkit-user-select:none;user-select:none;
+  }
+  #c{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  #c.grabbing{cursor:grabbing}
+
+  .panel{
+    position:fixed;z-index:10;
+    background:rgba(12,20,38,.82);
+    border:1px solid rgba(110,180,255,.18);
+    border-radius:14px;
+    padding:13px 16px;color:#cfe0f5;
+    -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);
+    box-shadow:0 10px 30px rgba(0,0,0,.55);
+    font-size:13px;line-height:1.7;
+  }
+
+  #info{top:14px;left:14px;max-width:340px}
+  #info h1{margin:0 0 7px;font-size:15px;font-weight:600;color:#eaf3ff;letter-spacing:.3px}
+  #info p{margin:0;font-size:12.5px;color:#9db0cc;line-height:1.72}
+  #info .hl{color:#ffb454;font-weight:600}
+  #info .hl2{color:#5fd8ff;font-weight:600}
+  #info .hl3{color:#6fe08a;font-weight:600}
+
+  #ctrl{left:14px;bottom:14px;min-width:316px}
+  .row{display:flex;align-items:center;gap:9px;margin:8px 0}
+  .lbl{color:#7f95b4;font-size:12.5px;white-space:nowrap}
+  #decVal{
+    color:#ffb454;font-weight:700;min-width:44px;text-align:right;
+    font-variant-numeric:tabular-nums;font-size:12.5px;
+  }
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    flex:1;height:4px;margin:0;border-radius:2px;outline:none;
+    background:linear-gradient(90deg,#2c4a72,#ffb454);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border:none;border-radius:50%;
+    background:#fff;box-shadow:0 0 10px #ffb454;cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border:none;border-radius:50%;
+    background:#fff;box-shadow:0 0 10px #ffb454;cursor:pointer;
+  }
+
+  input[type=number]{
+    width:76px;
+    background:rgba(18,32,54,.9);
+    border:1px solid rgba(110,180,255,.32);
+    color:#ffb454;border-radius:8px;
+    padding:5px 8px;font-size:13px;
+    font-family:inherit;outline:none;text-align:center;
+    font-variant-numeric:tabular-nums;
+    transition:border-color .18s;
+  }
+  input[type=number]:focus{border-color:#ffb454;box-shadow:0 0 8px rgba(255,180,84,.3)}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+
+  button{
+    background:rgba(60,110,168,.32);
+    border:1px solid rgba(120,180,255,.34);
+    color:#cfe6ff;border-radius:9px;
+    padding:7px 14px;font-size:12.5px;cursor:pointer;
+    font-family:inherit;transition:background .18s,border-color .18s;
+    white-space:nowrap;
+  }
+  button:hover{background:rgba(80,150,230,.50);border-color:rgba(140,200,255,.6)}
+  button:active{transform:scale(.97)}
+  button.active{
+    background:rgba(255,176,84,.22);
+    border-color:rgba(255,176,84,.65);
+    color:#ffd79a;
+  }
+  button.off{
+    background:rgba(60,60,70,.30);
+    border-color:rgba(120,130,150,.30);
+    color:#8095b0;
+  }
+
+  #hint{
+    position:fixed;right:14px;bottom:14px;z-index:10;
+    font-size:11.5px;color:#5d708c;letter-spacing:.3px;
+  }
+
+  @media (max-width:680px){
+    #info{max-width:calc(100vw - 28px);padding:11px 13px}
+    #info h1{font-size:13.5px}
+    #info p{font-size:11.5px;line-height:1.62}
+    #ctrl{width:calc(100vw - 28px);min-width:0;padding:11px 13px}
+    #ctrl .row{flex-wrap:wrap}
+    #hint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="info" class="panel">
+  <h1>地球自转 · 天体视运动 · 地平视角</h1>
+  <p>
+    地球绕 <span class="hl2">天轴</span> 自西向东自转，天球反向旋转。<br>
+    天体沿 <span class="hl">赤纬圈</span> 运动，轨迹平面 ⊥ 天轴。<br>
+    输入观测 <span class="hl3">纬度</span>，切换地平视角，观察该地看到的升落。
+  </p>
+</div>
+
+<div id="ctrl" class="panel">
+  <div class="row">
+    <span class="lbl">观测纬度 φ</span>
+    <input type="number" id="latInput" min="-90" max="90" step="1" value="40">
+    <span class="lbl">°</span>
+  </div>
+  <div class="row">
+    <button id="viewBtn">切换到地平视角</button>
+    <button id="horizonBtn">隐藏地平圈</button>
+  </div>
+  <div class="row">
+    <span class="lbl">天体赤纬 δ</span>
+    <input type="range" id="dec" min="-80" max="80" step="1" value="35">
+    <span id="decVal">35°</span>
+  </div>
+  <div class="row">
+    <button id="playBtn">⏸ 暂停</button>
+    <button id="resetBtn">↺ 重置视角</button>
+  </div>
+</div>
+
+<div id="hint">拖动旋转视角 · 滚轮缩放</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ==================== 基础环境 ==================== */
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0;
+
+  function resize(){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* ==================== 向量工具 ==================== */
+  function cross(a, b){
+    return [
+      a[1]*b[2] - a[2]*b[1],
+      a[2]*b[0] - a[0]*b[2],
+      a[0]*b[1] - a[1]*b[0]
+    ];
+  }
+  function normalize(a){
+    var l = Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
+    if (l < 1e-9) return [0,0,1];
+    return [a[0]/l, a[1]/l, a[2]/l];
+  }
+
+  /* ==================== 全局状态 ==================== */
+  var DEG = Math.PI / 180;
+  var theta = 0;
+  var playing = true;
+  var lastTime = 0;
+  var selectedDec = 35;
+  var latitude = 40;
+  var viewMode = '3d';
+  var showHorizon = true;
+
+  var CELESTIAL_R = 1.0;
+
+  /* ==================== 轨道相机 ==================== */
+  var camAz = 1.05, camEl = 0.38, camDist = 3.4;
+  var camPos = [0,0,3], camF = [0,0,-1], camR = [1,0,0], camU = [0,1,0];
+  var focal = 800;
+
+  function updateCamera(){
+    var ce = Math.cos(camEl), se = Math.sin(camEl);
+    var ca = Math.cos(camAz), sa = Math.sin(camAz);
+
+    camPos = [camDist*ce*ca, camDist*ce*sa, camDist*se];
+    camF = normalize([-camPos[0], -camPos[1], -camPos[2]]);
+
+    var r = cross(camF, [0,0,1]);
+    if (Math.sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]) < 1e-6) r = [0,1,0];
+    camR = normalize(r);
+    camU = cross(camR, camF);
+
+    focal = Math.min(W, H) * 0.95;
+  }
+
+  function project(p){
+    var vx = p[0] - camPos[0];
+    var vy = p[1] - camPos[1];
+    var vz = p[2] - camPos[2];
+
+    var d = vx*camF[0] + vy*camF[1] + vz*camF[2];
+    if (d < 0.15) return null;
+
+    var x = vx*camR[0] + vy*camR[1] + vz*camR[2];
+    var y = vx*camU[0] + vy*camU[1] + vz*camU[2];
+    var s = focal / d;
+    return { x: W*0.5 + x*s, y: H*0.5 - y*s, s: s };
+  }
+
+  /* ==================== 绘制工具 ==================== */
+  function drawPath(pts, opt){
+    opt = opt || {};
+    var n = pts.length;
+    if (n < 2) return;
+
+    var closed = !!opt.closed;
+    var total = closed ? n + 1 : n;
+    var started = false;
+
+    ctx.save();
+    ctx.beginPath();
+    for (var i = 0; i < total; i++){
+      var pr = project(pts[i % n]);
+      if (!pr){ started = false; continue; }
+      if (!started){ ctx.moveTo(pr.x, pr.y); started = true; }
+      else ctx.lineTo(pr.x, pr.y);
+    }
+    ctx.strokeStyle = opt.color || '#ffffff';
+    ctx.lineWidth   = opt.width || 1;
+    ctx.globalAlpha = (opt.alpha === undefined) ? 1 : opt.alpha;
+    ctx.lineJoin = 'round';
+    ctx.lineCap  = 'round';
+    if (opt.dash) ctx.setLineDash(opt.dash);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function fillPath(pts, style){
+    var n = pts.length;
+    if (n < 3) return;
+    var prs = [];
+    for (var i = 0; i < n; i++){
+      var pr = project(pts[i]);
+      if (!pr) return;
+      prs.push(pr);
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(prs[0].x, prs[0].y);
+    for (var j = 1; j < n; j++) ctx.lineTo(prs[j].x, prs[j].y);
+    ctx.closePath();
+    ctx.fillStyle = style;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStar(pos, rgb, size, glow){
+    var p = project(pos);
+    if (!p) return;
+    var rad = Math.max(1.5, size * p.s);
+
+    if (glow){
+      var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad * 8);
+      g.addColorStop(0,    'rgba(' + rgb + ',1)');
+      g.addColorStop(0.22, 'rgba(' + rgb + ',0.45)');
+      g.addColorStop(1,    'rgba(' + rgb + ',0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, rad * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function label(pos, text, color, dx, dy, align){
+    var p = project(pos);
+    if (!p) return;
+    ctx.save();
+    ctx.font = '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.shadowColor = 'rgba(0,0,0,.9)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(text, p.x + dx, p.y + dy);
+    ctx.restore();
+  }
+
+  function mergeOpts(base, extra){
+    var out = {};
+    for (var k in base) out[k] = base[k];
+    for (var k2 in extra) out[k2] = extra[k2];
+    return out;
+  }
+
+  /* ==================== 天球几何 ==================== */
+  function circlePoints(decDeg, n){
+    var dec = decDeg * DEG;
+    var cd = Math.cos(dec), sd = Math.sin(dec);
+    var arr = new Array(n);
+    for (var i = 0; i < n; i++){
+      var t = i / n * Math.PI * 2;
+      arr[i] = [cd * Math.cos(t), cd * Math.sin(t), sd];
+    }
+    return arr;
+  }
+  function pointOn(decDeg, lon){
+    var dec = decDeg * DEG;
+    var cd = Math.cos(dec), sd = Math.sin(dec);
+    return [cd * Math.cos(lon), cd * Math.sin(lon), sd];
+  }
+
+  var ringCache = {};
+  function getRing(decDeg, n){
+    var key = decDeg + '|' + n;
+    if (!ringCache[key]) ringCache[key] = circlePoints(decDeg, n);
+    return ringCache[key];
+  }
+
+  /* ==================== 按地平圈切分轨迹 ==================== */
+  /* 天顶方向 z = [cos(φ), 0, sin(φ)]
+     点 p 在地平圈以上 ⇔ p·z > 0
+     即 p[0]*cos(φ) + p[2]*sin(φ) > 0 */
+  function drawHorizonSplitPath(pts, phi, aboveOpts, belowOpts){
+    var n = pts.length;
+    if (n < 3){ drawPath(pts, aboveOpts); return; }
+
+    var cp = Math.cos(phi), sp = Math.sin(phi);
+
+    var above = new Array(n);
+    var hasAbove = false, hasBelow = false;
+    for (var i = 0; i < n; i++){
+      var p = pts[i];
+      var a = (p[0]*cp + p[2]*sp) > 0;
+      above[i] = a;
+      if (a) hasAbove = true; else hasBelow = true;
+    }
+
+    /* 整圈都在同一侧 */
+    if (!hasBelow){
+      drawPath(pts, mergeOpts(aboveOpts, { closed: true }));
+      return;
+    }
+    if (!hasAbove){
+      drawPath(pts, mergeOpts(belowOpts, { closed: true }));
+      return;
+    }
+
+    /* 找到第一个转换点作为起点（保证分组连续完整） */
+    var startIdx = 0;
+    for (var i = 0; i < n; i++){
+      if (above[i] !== above[(i + 1) % n]){
+        startIdx = (i + 1) % n;
+        break;
+      }
+    }
+
+    var segs = [];
+    var curAbove = above[startIdx];
+    var curArr = [pts[startIdx]];
+
+    for (var k = 1; k < n; k++){
+      var idx = (startIdx + k) % n;
+      if (above[idx] === curAbove){
+        curArr.push(pts[idx]);
+      } else {
+        curArr.push(pts[idx]);            // 转换点补入当前段
+        segs.push({ above: curAbove, arr: curArr });
+        curArr = [pts[idx]];              // 新段从转换点开始
+        curAbove = above[idx];
+      }
+    }
+    /* 闭合环绕：把起点补回最后一段 */
+    curArr.push(pts[startIdx]);
+    segs.push({ above: curAbove, arr: curArr });
+
+    for (var s = 0; s < segs.length; s++){
+      var seg = segs[s];
+      if (seg.arr.length < 2) continue;
+      drawPath(seg.arr, seg.above ? aboveOpts : belowOpts);
+    }
+  }
+
+  /* ==================== 半透明白色天球球面 ==================== */
+  function drawCelestialShell(){
+    var o = project([0,0,0]);
+    if (!o) return;
+    var Rpx = CELESTIAL_R * o.s;
+    if (Rpx < 2) return;
+    var cx = o.x, cy = o.y;
+
+    var g = ctx.createRadialGradient(
+      cx - Rpx*0.35, cy - Rpx*0.38, Rpx*0.05,
+      cx, cy, Rpx*1.0
+    );
+    g.addColorStop(0.00, 'rgba(255,255,255,0.030)');
+    g.addColorStop(0.55, 'rgba(240,248,255,0.045)');
+    g.addColorStop(0.86, 'rgba(230,242,255,0.075)');
+    g.addColorStop(1.00, 'rgba(220,238,255,0.190)');
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(210,232,255,0.32)';
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+
+    var halo = ctx.createRadialGradient(
+      cx, cy, Rpx*0.92,
+      cx, cy, Rpx*1.10
+    );
+    halo.addColorStop(0, 'rgba(180,215,255,0.14)');
+    halo.addColorStop(1, 'rgba(180,215,255,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx*1.10, 0, Math.PI*2);
+    ctx.fillStyle = halo;
+    ctx.fill();
+
+    var hl = ctx.createRadialGradient(
+      cx - Rpx*0.42, cy - Rpx*0.44, 0,
+      cx - Rpx*0.42, cy - Rpx*0.44, Rpx*0.72
+    );
+    hl.addColorStop(0, 'rgba(255,255,255,0.10)');
+    hl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.fillStyle = hl;
+    ctx.fill();
+  }
+
+  /* ==================== 地球 ==================== */
+  var EARTH_R = 0.11;
+  var earthRot = 0;
+
+  var CONTINENTS = [
+    { lat:  50, lon:  25, r: 24 },
+    { lat:  18, lon:  22, r: 21 },
+    { lat:  48, lon: -98, r: 21 },
+    { lat: -14, lon: -60, r: 17 },
+    { lat: -25, lon: 134, r: 14 },
+    { lat:  72, lon: -42, r: 11 }
+  ];
+
+  function sphereCap(cLatRad, cLonRad, angRad, segs){
+    var c = [
+      Math.cos(cLatRad)*Math.cos(cLonRad),
+      Math.cos(cLatRad)*Math.sin(cLonRad),
+      Math.sin(cLatRad)
+    ];
+    var e1 = cross(c, [0,0,1]);
+    if (Math.sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]) < 1e-6) e1 = [1,0,0];
+    e1 = normalize(e1);
+    var e2 = cross(c, e1);
+
+    var ca = Math.cos(angRad), sa = Math.sin(angRad);
+    var out = [];
+    for (var i = 0; i < segs; i++){
+      var t = i/segs * Math.PI * 2;
+      var ct = Math.cos(t), st = Math.sin(t);
+      out.push([
+        EARTH_R*(ca*c[0] + sa*(e1[0]*ct + e2[0]*st)),
+        EARTH_R*(ca*c[1] + sa*(e1[1]*ct + e2[1]*st)),
+        EARTH_R*(ca*c[2] + sa*(e1[2]*ct + e2[2]*st))
+      ]);
+    }
+    return out;
+  }
+
+  function drawSphereCurve(pts, style){
+    var cur = [];
+    for (var i = 0; i < pts.length; i++){
+      var p = pts[i];
+      var nx = p[0]/EARTH_R, ny = p[1]/EARTH_R, nz = p[2]/EARTH_R;
+      var vx = camPos[0]-p[0], vy = camPos[1]-p[1], vz = camPos[2]-p[2];
+      var dot = nx*vx + ny*vy + nz*vz;
+      if (dot > 0.012){
+        cur.push(p);
+      } else {
+        if (cur.length > 1) drawPath(cur, style);
+        cur = [];
+      }
+    }
+    if (cur.length > 1) drawPath(cur, style);
+  }
+
+  function drawEarth(){
+    var o = project([0,0,0]);
+    if (!o) return;
+    var Rpx = EARTH_R * o.s;
+    if (Rpx < 1.2) return;
+    var cx = o.x, cy = o.y;
+
+    var halo = ctx.createRadialGradient(cx, cy, Rpx*0.92, cx, cy, Rpx*1.45);
+    halo.addColorStop(0, 'rgba(120,190,255,0.30)');
+    halo.addColorStop(1, 'rgba(120,190,255,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx*1.45, 0, Math.PI*2);
+    ctx.fillStyle = halo;
+    ctx.fill();
+
+    var g = ctx.createRadialGradient(
+      cx - Rpx*0.36, cy - Rpx*0.38, Rpx*0.05,
+      cx, cy, Rpx*1.25
+    );
+    g.addColorStop(0,    '#69b8f2');
+    g.addColorStop(0.34, '#3180c8');
+    g.addColorStop(0.68, '#164d8d');
+    g.addColorStop(1,    '#07223f');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.clip();
+
+    for (var i = 0; i < CONTINENTS.length; i++){
+      var c = CONTINENTS[i];
+      var cLat = c.lat * DEG;
+      var cLon = c.lon * DEG + earthRot;
+
+      var dir = [
+        Math.cos(cLat)*Math.cos(cLon),
+        Math.cos(cLat)*Math.sin(cLon),
+        Math.sin(cLat)
+      ];
+      var dotv = dir[0]*camPos[0] + dir[1]*camPos[1] + dir[2]*camPos[2];
+      if (dotv < EARTH_R * 1.15) continue;
+
+      var cap = sphereCap(cLat, cLon, c.r * DEG, 30);
+      fillPath(cap, 'rgba(76,160,96,0.94)');
+    }
+
+    var k;
+    for (var lat = -60; lat <= 60; lat += 30){
+      var wpts = [];
+      var cl = lat * DEG, cd = Math.cos(cl), sd = Math.sin(cl);
+      for (k = 0; k <= 48; k++){
+        var t = k/48 * Math.PI*2 + earthRot;
+        wpts.push([EARTH_R*cd*Math.cos(t), EARTH_R*cd*Math.sin(t), EARTH_R*sd]);
+      }
+      drawSphereCurve(wpts, { color:'rgba(150,220,255,0.38)', width:1 });
+    }
+    for (var lon = 0; lon < 180; lon += 15){
+      var mpts = [];
+      var a = lon * DEG + earthRot;
+      for (k = 0; k <= 32; k++){
+        var tt = -Math.PI/2 + k/32 * Math.PI;
+        mpts.push([
+          EARTH_R*Math.cos(tt)*Math.cos(a),
+          EARTH_R*Math.cos(tt)*Math.sin(a),
+          EARTH_R*Math.sin(tt)
+        ]);
+      }
+      drawSphereCurve(mpts, { color:'rgba(150,220,255,0.38)', width:1 });
+    }
+
+    var npc = sphereCap(Math.PI/2, earthRot, 13*DEG, 24);
+    fillPath(npc, 'rgba(235,248,255,0.82)');
+    var spc = sphereCap(-Math.PI/2, earthRot, 11*DEG, 24);
+    fillPath(spc, 'rgba(220,240,255,0.62)');
+
+    var sh = ctx.createRadialGradient(
+      cx - Rpx*0.48, cy - Rpx*0.48, Rpx*0.06,
+      cx - Rpx*0.06, cy - Rpx*0.06, Rpx*1.55
+    );
+    sh.addColorStop(0,   'rgba(0,0,0,0)');
+    sh.addColorStop(0.48,'rgba(0,0,0,0.06)');
+    sh.addColorStop(1,   'rgba(2,8,20,0.78)');
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rpx, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(130,205,255,0.60)';
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+    ctx.restore();
+
+    return Rpx;
+  }
+
+  /* ==================== 3D 场景 ==================== */
+  var BG_STARS = [
+    { dec:  62, ph: 0.6 },
+    { dec:  28, ph: 2.3 },
+    { dec: -18, ph: 4.1 },
+    { dec: -52, ph: 5.5 },
+    { dec:  -8, ph: 1.4 },
+    { dec:  15, ph: 3.3 },
+    { dec: -35, ph: 0.9 },
+    { dec:  45, ph: 5.0 }
+  ];
+
+  function draw3DScene(){
+    updateCamera();
+
+    earthRot = theta;
+    var celLon = -theta;
+    var phi = latitude * DEG;
+
+    var bg = ctx.createRadialGradient(
+      W*0.5, H*0.45, 0,
+      W*0.5, H*0.45, Math.max(W,H)*0.78
+    );
+    bg.addColorStop(0,    '#0e1a31');
+    bg.addColorStop(0.62, '#070c18');
+    bg.addColorStop(1,    '#03050b');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    drawCelestialShell();
+
+    for (var d = -75; d <= 75; d += 15){
+      if (d === 0) continue;
+      drawPath(getRing(d, 96), {
+        color:'#1e3459', width:1, alpha:0.9, closed:true
+      });
+    }
+
+    drawPath(getRing(0, 128), {
+      color:'#3d78b8', width:1.6, alpha:0.95, closed:true
+    });
+
+    /* ---- 观测者地平圈 + 天顶线 ---- */
+    var hpts = [];
+    for (var i = 0; i < 96; i++){
+      var t = i/96 * Math.PI * 2;
+      hpts.push([
+        -Math.sin(phi)*Math.sin(t),
+        Math.cos(t),
+        Math.cos(phi)*Math.sin(t)
+      ]);
+    }
+    var zen = [Math.cos(phi), 0, Math.sin(phi)];
+
+    /* ---- 天体轨迹：地平圈以上实线，以下虚线 ---- */
+    var ring = getRing(selectedDec, 180);
+
+    /* 轨迹平面（半透明填充，保持完整） */
+    fillPath(ring, 'rgba(255,176,84,0.09)');
+
+    /* 按地平圈切分绘制轨迹 */
+    drawHorizonSplitPath(ring, phi,
+      /* 地平圈以上：实线 */
+      { color:'#ffb454', width:2.4, alpha:1 },
+      /* 地平圈以下：虚线 */
+      { color:'rgba(255,176,84,0.65)', width:1.8, alpha:0.9, dash:[7,6] }
+    );
+
+    /* 地平圈与填充绘制在轨迹之后，压住下半部分虚线的起始段 */
+    if (showHorizon){
+      fillPath(hpts, 'rgba(255,255,255,0.85)');
+      drawPath(hpts, { color:'rgba(90,220,180,0.9)', width:2.0, closed:true });
+      drawPath([[0,0,0], zen], {
+        color:'rgba(90,220,180,0.9)', width:1.4, dash:[4,4]
+      });
+    }
+
+    drawPath([[0,0,-1.45],[0,0,1.45]], {
+      color:'#5fd8ff', width:2, alpha:0.9
+    });
+
+    drawStar([0,0,1.30], '170,225,255', 0.020, true);
+
+    for (var i = 0; i < BG_STARS.length; i++){
+      var b = BG_STARS[i];
+      drawStar(pointOn(b.dec, celLon + b.ph), '140,200,255', 0.010, false);
+    }
+
+    var starPos = pointOn(selectedDec, celLon);
+    var foot = [0, 0, starPos[2]];
+
+    drawPath([starPos, foot], {
+      color:'rgba(255,200,110,0.62)', width:1.2, dash:[5,5]
+    });
+
+    if (Math.abs(selectedDec) > 12){
+      var m = Math.min(0.10, 0.30 * Math.abs(Math.cos(selectedDec * DEG)));
+      if (m > 0.02){
+        var ux = Math.cos(celLon), uy = Math.sin(celLon);
+        var pa = [foot[0] + m*ux, foot[1] + m*uy, foot[2]];
+        var pc = [foot[0] + m*ux, foot[1] + m*uy, foot[2] + m];
+        var pb = [foot[0], foot[1], foot[2] + m];
+        drawPath([pa, pc, pb], { color:'#7fe8ff', width:1.6, alpha:0.95 });
+      }
+    }
+
+    drawStar(starPos, '255,190,90', 0.022, true);
+
+    drawEarth();
+
+    label([0,0,1.32], '北极星（北天极附近）', '#bfe8ff', 16, -12);
+    label([0,0,0.80], '天轴 = 地轴延长线', '#5fd8ff', 14, 0);
+    label(starPos, '天体', '#ffd79a', 15, -15);
+
+    var ringLab = pointOn(selectedDec, celLon + 1.0);
+    label(ringLab, 'δ = ' + selectedDec + '°  轨迹平面', '#ffb454', 10, 0);
+
+    var shellLab = [-0.72, 0.62, 0.30];
+    label(shellLab, '天球（半透明）', 'rgba(215,232,255,0.75)', 8, 0,
+          'left');
+
+    if (showHorizon){
+      label(zen, '天顶 Z', '#1a5040', 10, -8);
+      label([-Math.sin(phi), 1, Math.cos(phi)], '观测者地平圈', '#1a5040', 10, 0);
+    }
+  }
+
+  /* ==================== 地平视角 ==================== */
+  var HS = { cx: 0, cy: 0, R: 0, phi: 0 };
+
+  function skyProject(decDeg, lonRad){
+    var dec = decDeg * DEG;
+    var Sx = Math.cos(dec) * Math.cos(lonRad);
+    var Sy = Math.cos(dec) * Math.sin(lonRad);
+    var Sz = Math.sin(dec);
+
+    var sp = Math.sin(HS.phi), cp = Math.cos(HS.phi);
+
+    var SE = Sy;
+    var SN = -sp*Sx + cp*Sz;
+    var SZ =  cp*Sx + sp*Sz;
+
+    if (SZ > 1) SZ = 1; else if (SZ < -1) SZ = -1;
+
+    var alt = Math.asin(SZ);
+    var az  = Math.atan2(SE, SN);
+
+    var r = HS.R * (Math.PI*0.5 - alt) / Math.PI;
+    return {
+      x: HS.cx - r*Math.sin(az),
+      y: HS.cy - r*Math.cos(az),
+      alt: alt,
+      az: az,
+      below: alt < 0
+    };
+  }
+
+  function skyLabel(pt, text, color, dx, dy, align, font){
+    ctx.save();
+    ctx.font = font || '13px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.shadowColor = 'rgba(0,0,0,.92)';
+    ctx.shadowBlur = 7;
+    ctx.fillText(text, pt.x + dx, pt.y + dy);
+    ctx.restore();
+  }
+
+  function drawSkyTrack(decDeg, lonOffset, opt){
+    opt = opt || {};
+    var N = 220;
+    var pts = [];
+    for (var i = 0; i <= N; i++){
+      var lon = (i/N) * Math.PI * 2 + lonOffset;
+      pts.push(skyProject(decDeg, lon));
+    }
+
+    var groups = [];
+    var cur = { below: pts[0].below, arr: [pts[0]] };
+    for (var i = 1; i <= N; i++){
+      if (pts[i].below === cur.below){
+        cur.arr.push(pts[i]);
+      } else {
+        cur.arr.push(pts[i]);
+        groups.push(cur);
+        cur = { below: pts[i].below, arr: [pts[i]] };
+      }
+    }
+    groups.push(cur);
+
+    for (var g = 0; g < groups.length; g++){
+      var grp = groups[g];
+      if (grp.arr.length < 2) continue;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(grp.arr[0].x, grp.arr[0].y);
+      for (var k = 1; k < grp.arr.length; k++){
+        ctx.lineTo(grp.arr[k].x, grp.arr[k].y);
+      }
+      if (grp.below){
+        ctx.strokeStyle = opt.belowColor || 'rgba(100,130,170,0.20)';
+        ctx.lineWidth = (opt.width || 2) * 0.55;
+        ctx.setLineDash([4, 6]);
+      } else {
+        ctx.strokeStyle = opt.color || '#ffb454';
+        ctx.lineWidth = opt.width || 2;
+        if (opt.dash) ctx.setLineDash(opt.dash);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawHorizonView(){
+    var cx = W * 0.5, cy = H * 0.5;
+    var R = Math.min(W, H) * 0.40;
+    HS.cx = cx; HS.cy = cy; HS.R = R;
+    HS.phi = latitude * DEG;
+
+    var Rhor = R * 0.5;
+    var phi = HS.phi;
+    var celLon = -theta;
+
+    var bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.75);
+    bg.addColorStop(0,    '#0a1425');
+    bg.addColorStop(0.65, '#050a14');
+    bg.addColorStop(1,    '#02040a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.arc(cx, cy, Rhor, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(4,8,16,0.94)';
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    var skyGrad = ctx.createRadialGradient(cx, cy - Rhor*0.25, 0, cx, cy, Rhor);
+    skyGrad.addColorStop(0,    '#17293f');
+    skyGrad.addColorStop(0.55, '#0c1728');
+    skyGrad.addColorStop(1,    '#070f1c');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Rhor, 0, Math.PI*2);
+    ctx.fillStyle = skyGrad;
+    ctx.fill();
+
+    ctx.save();
+    ctx.setLineDash([3, 6]);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(110,160,220,0.18)';
+    for (var a = 30; a <= 60; a += 30){
+      var rr = R * (90 - a) / 180;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    var majors = [
+      { az: 0,   label: '北 N' },
+      { az: 90,  label: '东 E' },
+      { az: 180, label: '南 S' },
+      { az: 270, label: '西 W' }
+    ];
+    var minors = [45, 135, 225, 315];
+
+    ctx.save();
+    ctx.setLineDash([3, 6]);
+    ctx.strokeStyle = 'rgba(110,160,220,0.12)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < minors.length; i++){
+      var azr = minors[i] * DEG;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - Rhor*Math.sin(azr), cy - Rhor*Math.cos(azr));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(130,190,255,0.26)';
+    ctx.lineWidth = 1;
+    for (var i = 0; i < majors.length; i++){
+      var azr = majors[i].az * DEG;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - Rhor*Math.sin(azr), cy - Rhor*Math.cos(azr));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (showHorizon){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, Rhor, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(150,215,255,0.90)';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(80,120,170,0.22)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.font = '600 13px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.9)';
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#9fc8f0';
+    for (var i = 0; i < majors.length; i++){
+      var azr = majors[i].az * DEG;
+      var lx = cx - (Rhor + 22)*Math.sin(azr);
+      var ly = cy - (Rhor + 22)*Math.cos(azr);
+      ctx.fillText(majors[i].label, lx, ly);
+    }
+    ctx.restore();
+
+    drawSkyTrack(0, celLon, {
+      color: 'rgba(80,150,220,0.55)',
+      belowColor: 'rgba(55,95,145,0.16)',
+      width: 1.5
+    });
+
+    var refDecs = [60, 30, -30, -60];
+    for (var i = 0; i < refDecs.length; i++){
+      drawSkyTrack(refDecs[i], celLon, {
+        color: 'rgba(70,115,165,0.32)',
+        belowColor: 'rgba(45,75,115,0.10)',
+        width: 1
+      });
+    }
+
+    drawSkyTrack(selectedDec, celLon, {
+      color: '#ffb454',
+      belowColor: 'rgba(255,176,84,0.16)',
+      width: 2.4
+    });
+
+    var ncp = skyProject(90, 0);
+    var scp = skyProject(-90, 0);
+
+    if (!ncp.below){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ncp.x, ncp.y, 5, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(150,220,255,0.9)';
+      ctx.shadowColor = '#7fd8ff';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+      ctx.restore();
+      skyLabel(ncp, '北天极（北极星）', '#bfe8ff', 12, -10);
+    } else {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ncp.x, ncp.y, 4, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(120,180,230,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3,3]);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (!scp.below){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(scp.x, scp.y, 4, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(150,220,255,0.5)';
+      ctx.fill();
+      ctx.restore();
+      skyLabel(scp, '南天极', '#8fb8dd', 12, 10);
+    }
+
+    for (var i = 0; i < BG_STARS.length; i++){
+      var b = BG_STARS[i];
+      var bp = skyProject(b.dec, celLon + b.ph);
+      if (bp.below) continue;
+      ctx.save();
+      var g2 = ctx.createRadialGradient(bp.x, bp.y, 0, bp.x, bp.y, 7);
+      g2.addColorStop(0, 'rgba(170,215,255,0.95)');
+      g2.addColorStop(1, 'rgba(170,215,255,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, 7, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, 1.8, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    var sp2 = skyProject(selectedDec, celLon);
+
+    if (sp2.below){
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sp2.x, sp2.y, 3.2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,180,90,0.35)';
+      ctx.fill();
+      ctx.restore();
+      skyLabel(sp2, '天体（地平线下）', 'rgba(255,190,110,0.45)', 10, 0);
+    } else {
+      ctx.save();
+      var sg = ctx.createRadialGradient(sp2.x, sp2.y, 0, sp2.x, sp2.y, 20);
+      sg.addColorStop(0,    'rgba(255,235,180,1)');
+      sg.addColorStop(0.25, 'rgba(255,190,90,0.65)');
+      sg.addColorStop(1,    'rgba(255,160,60,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(sp2.x, sp2.y, 20, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(sp2.x, sp2.y, 4.5, 0, Math.PI*2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+
+      var altDeg = Math.round(sp2.alt / DEG * 10) / 10;
+      skyLabel(sp2, '天体  h=' + altDeg.toFixed(1) + '°',
+               '#ffd79a', 13, -13);
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+    ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
+    ctx.strokeStyle = 'rgba(90,220,180,0.55)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
+    skyLabel({ x: cx, y: cy }, '天顶 Z', '#5fe0b0', 10, -12);
+
+    skyLabel({ x: cx, y: cy - Rhor }, '地平线', 'rgba(140,210,255,0.85)',
+             -14, -12, 'right');
+
+    var eqPt = skyProject(0, celLon + Math.PI * 0.65);
+    if (!eqPt.below){
+      skyLabel(eqPt, '天赤道', 'rgba(110,170,230,0.85)', 10, 0);
+    }
+
+    if (showHorizon){
+      ctx.save();
+      ctx.font = '600 13px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(255,180,84,0.9)';
+      ctx.shadowColor = 'rgba(0,0,0,.9)';
+      ctx.shadowBlur = 6;
+      ctx.fillText('观测纬度 φ = ' + latitude.toFixed(0) + '°', 20, 20);
+      ctx.font = '12px "PingFang SC","Microsoft YaHei",sans-serif';
+      ctx.fillStyle = 'rgba(150,200,240,0.75)';
+      ctx.fillText('北天极高度 = |φ| = ' + Math.abs(latitude).toFixed(0) + '°', 20, 40);
+      ctx.restore();
+    }
+  }
+
+  /* ==================== 主循环 ==================== */
+  function drawScene(){
+    if (viewMode === '3d') draw3DScene();
+    else drawHorizonView();
+  }
+
+  function loop(t){
+    if (!lastTime) lastTime = t;
+    var dt = Math.min((t - lastTime) / 1000, 0.05);
+    lastTime = t;
+
+    if (playing) theta += 0.45 * dt;
+
+    try { drawScene(); } catch (err){ console.error(err); }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  /* ==================== 交互 ==================== */
+  var dragging = false, lastX = 0, lastY = 0;
+
+  canvas.addEventListener('pointerdown', function(e){
+    if (viewMode !== '3d') return;
+    dragging = true;
+    lastX = e.clientX; lastY = e.clientY;
+    canvas.classList.add('grabbing');
+    if (canvas.setPointerCapture){
+      try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+    }
+  });
+
+  canvas.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    var dx = e.clientX - lastX;
+    var dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+
+    camAz -= dx * 0.008;
+    camEl -= dy * 0.006;
+    camEl = Math.max(-1.40, Math.min(1.40, camEl));
+  });
+
+  function endDrag(e){
+    dragging = false;
+    canvas.classList.remove('grabbing');
+    if (canvas.releasePointerCapture){
+      try { canvas.releasePointerCapture(e.pointerId); } catch(err){}
+    }
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('pointerleave', function(){ dragging = false; });
+
+  canvas.addEventListener('wheel', function(e){
+    if (viewMode !== '3d') return;
+    e.preventDefault();
+    camDist *= Math.exp(e.deltaY * 0.0012);
+    camDist = Math.max(2.0, Math.min(7.0, camDist));
+  }, { passive:false });
+
+  /* ==================== 控件 ==================== */
+  var latInput = document.getElementById('latInput');
+
+  function applyLatitude(v){
+    if (isNaN(v)) return;
+    v = Math.max(-90, Math.min(90, v));
+    latitude = v;
+  }
+
+  latInput.addEventListener('input', function(){
+    var v = parseFloat(latInput.value);
+    if (!isNaN(v)) applyLatitude(v);
+  });
+  latInput.addEventListener('change', function(){
+    var v = parseFloat(latInput.value);
+    if (isNaN(v)) v = latitude;
+    applyLatitude(v);
+    latInput.value = latitude;
+  });
+
+  var decInput = document.getElementById('dec');
+  var decVal   = document.getElementById('decVal');
+  decInput.addEventListener('input', function(){
+    selectedDec = parseInt(decInput.value, 10);
+    decVal.textContent = selectedDec + '°';
+  });
+
+  var viewBtn = document.getElementById('viewBtn');
+  viewBtn.addEventListener('click', function(){
+    if (viewMode === '3d'){
+      viewMode = 'horizon';
+      viewBtn.textContent = '切换到立体视图';
+      viewBtn.classList.add('active');
+    } else {
+      viewMode = '3d';
+      viewBtn.textContent = '切换到地平视角';
+      viewBtn.classList.remove('active');
+    }
+  });
+
+  var horizonBtn = document.getElementById('horizonBtn');
+  horizonBtn.addEventListener('click', function(){
+    showHorizon = !showHorizon;
+    if (showHorizon){
+      horizonBtn.textContent = '隐藏地平圈';
+      horizonBtn.classList.remove('off');
+    } else {
+      horizonBtn.textContent = '显示地平圈';
+      horizonBtn.classList.add('off');
+    }
+  });
+
+  var playBtn = document.getElementById('playBtn');
+  playBtn.addEventListener('click', function(){
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ 暂停' : '▶ 播放';
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    camAz = 1.05; camEl = 0.38; camDist = 3.4;
+  });
+
+})();
+</script>
+</body>
+</html>
