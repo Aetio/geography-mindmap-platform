@@ -124,7 +124,7 @@ document.getElementById('publishForm').onsubmit=async e=>{e.preventDefault();con
 </script>
 <script>
 // Make local uploads visible to the uploader and explain their review state.
-const submissionNav=document.createElement('button');submissionNav.id='mySubmissionsNav';submissionNav.className='review-nav-button';submissionNav.textContent='我的提交';submissionNav.hidden=true;document.querySelector('.nav').append(submissionNav);
+const submissionNav=document.createElement('button');submissionNav.id='mySubmissionsNav';submissionNav.dataset.view='submissions';submissionNav.className='review-nav-button';submissionNav.textContent='我的提交';submissionNav.hidden=true;document.querySelector('.nav').append(submissionNav);
 const submissionView=document.createElement('section');submissionView.id='submissions';submissionView.className='view';submissionView.innerHTML='<div class="eyebrow">MY SUBMISSIONS</div><h1 class="page-title">我的地图提交</h1><p class="sub">查看当前浏览器中提交的地图及审核状态。</p><div class="section-head"><div><h2 style="font-size:17px">提交记录</h2></div><div class="count" id="mySubmissionCount"></div></div><div id="mySubmissionGrid" class="grid"></div><p class="map-caption" style="margin-top:20px">当前站点使用浏览器本地存储。提交记录和审核结果只在此浏览器可见，不会自动同步给管理员或其他访问者。</p>';
 document.querySelector('main.container').append(submissionView);
 const priorShowViewWithUploads=showView;
